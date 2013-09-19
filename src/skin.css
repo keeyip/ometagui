@@ -1,0 +1,29 @@
+body {
+	font-family: verdana;
+	font-size: 12px;
+	background: hsl(0,0%,30%);
+}
+
+.bg-1 {
+	background: hsl(0,0%,80%);
+}
+
+.padding-small {
+	padding: 8px;
+}
+
+.margin-vertical-large {
+	margin-top: 10px;
+	margin-bottom: 10px;
+}
+.margin-left-large {
+	margin-left: 10px;
+}
+
+
+textarea {
+	font-family: inconsolata-dz;
+	line-height: 2;
+	letter-spacing:1px;
+	padding: 0 8px;
+}

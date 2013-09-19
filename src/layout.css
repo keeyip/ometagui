@@ -1,0 +1,58 @@
+* {
+	box-sizing: border-box;
+}
+.full-width {
+	width: 100%;
+}
+.row {
+	display: block;
+	min-height: 30px;
+	overflow: hidden;
+	white-space: nowrap;
+}
+.column {
+	display: inline-block;
+	vertical-align: top;
+	white-space: normal;
+}
+.width-gutter {
+	width: 30px;
+}
+.width-10-percent {
+	width: 10%;
+}
+.width-90-percent {
+	width: 90%;
+}
+
+.float-left {
+	float:left;
+	margin-right: 8px;
+}
+
+.indent-1 {
+	margin-left: 10px;
+}
+
+.padding-large {
+	padding: 20px;
+}
+
+.hover-visible {
+	opacity: 0.3;
+}
+.hover-visible:hover,
+.hover-visible:focus
+{
+	opacity: 1;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+td,th,input,button,textarea {
+	vertical-align:top;
+	text-align:left;
+}
+
