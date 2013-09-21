@@ -53,8 +53,94 @@ textarea {
 	padding: 0 8px;
 	background: hsl(0,0%,30%);
 	color: white;
-	-webkit-transition: background 0.1s ease-out;
+	transition: background 0.1s ease-out;
 }
 .message.error {
 	background: hsl(0,50%,50%);
+}
+.no-border-top {
+	border-top: 0 !important;
+}
+
+.row {
+	position: relative;
+}
+.inline-block {
+	display:inline-block;
+	vertical-align: top;
+}
+.friendgraph {
+	background:hsl(0,0%,85%);
+}
+.column-bg.pivot {
+	background:white;
+}
+.friendgraph .column.header {
+}
+.friendgraph .column {
+	padding: 8px;
+	border-top: solid 1px hsl(0,0%,70%);
+}
+.friendgraph .column.pivot {
+	border-top-color: hsl(0,0%,85%);
+}
+.header {
+	font-weight: bold;
+	font-size: 12px;
+}
+.column.header {
+	height: 30px;
+	line-height: 30px;
+	padding-top:0;
+	padding-bottom:0;
+}
+.column-bg.small,
+.column.small {
+	width: 100px;
+}
+
+.column-bg {
+	position:absolute;
+	top:0;
+	bottom:0;
+}
+
+.position-relative {
+	position: relative;
+}
+
+
+.column img.sex {
+	width: 32px;
+	vertical-align:top;
+	margin-right: 8px;
+}
+
+.highlight-ring {
+	z-index:999;
+	border: solid 2px orange;
+	position:absolute;
+	box-shadow: 0 0 4px 2px hsla(40,80%,80%,1), inset 0 0 4px 2px hsla(40,80%,80%,1);
+	border-radius:2px;
+	transition: top 0.4s ease-out, left 0.4s ease-out, height 0.4s ease-out, width 0.4s ease-out;
+}
+[data-reference] {
+	border: solid 1px transparent;
+	border-radius: 2px;
+	padding: 2px;
+	transition: background 0.1s ease-out;
+}
+
+[data-reference].hover,
+[data-reference]:focus,
+[data-reference]:hover {
+	border-color: hsl(40,80%,50%);
+	box-shadow: 0 0 4px 2px hsla(40,80%,80%,1), inset 0 0 4px 2px hsla(40,80%,80%,1);
+	cursor: pointer;
+}
+[data-reference].active,
+[data-reference]:active {
+	box-shadow: 0 0 4px 2px hsla(0,0%,50%,1), inset 0 0 4px 2px hsla(0,0%,30%,1);
+	background: hsla(0,0%,0%,0.3);
+	border-color: hsl(0,0%,50%);
 }

@@ -1,3 +1,4 @@
+
 $(function() {
 	var $in = $('<textarea class="app-in">')
 	var $out = $('<pre class="app-out">')
@@ -78,5 +79,83 @@ $(function() {
 			if (event.meta.target !== $in)
 				$in.val(event.data.newValue)
 		}
+	})
+
+
+
+
+
+
+	window.friendGraph = new Model()
+	friendGraph.add('person.Bob.knows', 'Alice')
+	friendGraph.add('person.Alice.knows', 'Bob')
+	friendGraph.add('person.Jerry.knows', 'Alice')
+	friendGraph.add('person.Jerry.knows', 'Bob')
+	friendGraph.add('person.Alice.knows', 'Jerry')
+	friendGraph.add('person.Alice.likes', 'Jerry')
+	friendGraph.add('person.Jerry.likes', 'Bob')
+	friendGraph.add('person.Bob.knows', 'Jerry')
+	friendGraph.set('person.Bob.sex', 'male')
+	friendGraph.set('person.Alice.sex', 'female')
+	friendGraph.set('person.Jerry.sex', 'male')
+	window.friendGraphPresentation = new Model()
+	friendGraphPresentation.set('people', _.sortBy(_.map(friendGraph.get('person'), function(person, name) {
+		return _.extend({
+			id: name,
+			name: name,
+		}, person)
+	}), function(name) { return name }))
+
+	$('<div class="friendgraph position-relative inline-block">')
+		.append($('<div class="small column-bg pivot"></div>'))
+		/*
+		.append($('<div class="row">')
+			.append($('<div class="column header small">Person</div>'))
+			.append($('<div class="column header small">Knows</div>'))
+			.append($('<div class="column header small">Likes</div>')))
+		*/
+		.append(_.map(friendGraphPresentation.get('people'), function(person) {
+			return $()
+				.add($('<div class="row">')
+					.append($('<div class="column small pivot" data-property="name">')
+						.attr('data-record', person.id)
+						.append($('<img class="sex">').attr('src', 'src/' + person.sex + '.png'))
+						.append($('<span>').text(person.name)))
+					.append($('<div class="column small" data-property="knows">')
+						.append('<div class="header">Knows:</div>')
+						.append(_.map(person.knows, function(other) {
+							return $('<button type="button">').text(other)
+								.attr('data-reference', other)
+						})))
+					.append($('<div class="column small" data-property="likes">')
+						.append('<div class="header">Likes:</div>')
+						.append(_.map(person.likes, function(other) {
+							return $('<button type="button">').text(other)
+								.attr('data-reference', other)
+						}))))
+		}))
+		.appendTo('body')
+
+	var $highlightRecord = $('<div class="highlight-ring">')
+				.hide()
+				.appendTo('body')
+	$('body').on('click', '[data-reference]', function(event) {
+		var $el = $(this)
+		var ref = $el.attr('data-reference')
+		$('[data-record="'+ref+'"').each(function() {
+			var $ref = $(this)
+			var height = $ref.outerHeight()
+			if ($ref.is('.column')) {
+				var $row = $ref.closest('.row')
+				if ($row[0]) {
+					height = $row.outerHeight()
+				}
+			}
+			$highlightRecord
+				.offset($ref.offset())
+				.outerWidth($ref.outerWidth())
+				.outerHeight(height)
+				.show()
+		})
 	})
 });

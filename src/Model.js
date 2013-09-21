@@ -1,3 +1,6 @@
+function makeArrayLiteral() { return [] }
+function makeObjectLiteral() { return {} }
+
 var Model = function Model () {
 	_.extend(this, {
 		data: {},
@@ -41,21 +44,31 @@ Model.prototype = {
 		this.listeners[eventName].byId[id] = callback
 		this.listeners[eventName].list.push(callback)
 	},
-	get: function(pathstr) {
-		var path = _.isString(pathstr) ? pathstr.split('.') : pathstr
-		return _.reduce(path, function(x, key) {
-			if (_.isUndefined(x[key]))
-				x[key] = {}
-			return x[key]
+	get: function(pathstr, defaultValue) {
+		var path = _.isString(pathstr) ? pathstr.split('.') : _.clone(pathstr)
+		var key = path.pop()
+		if (!key) {
+			return this.data
+		}
+		var obj = _.reduce(path, function(x, k) {
+			if (_.isUndefined(x[k]))
+				x[k] = {}
+			return x[k]
 		}, this.data)
+		var result = obj[key]
+		if (_.isUndefined(result) && !_.isUndefined(defaultValue)) {
+			result = _.isFunction(defaultValue) ? defaultValue() : defaultValue
+			obj[key] = result
+		}
+		return result
 	},
 	set: function(pathstr, value, meta, validate) {
 		if (validate) {
 			if (!this.validate({pathstr:pathstr, value:value, meta:eventMeta})) return false
 		}
-		var path = _.isString(pathstr) ? pathstr.split('.') : pathstr
+		var path = _.isString(pathstr) ? pathstr.split('.') : _.clone(pathstr)
 		var key = path.pop()
-		var x = this.get(path)
+		var x = this.get(path, makeObjectLiteral)
 		x[key] = value
 		return true
 	},
@@ -93,7 +106,7 @@ Model.prototype = {
 	add: function(pathstr, newValue, eventMeta) {
 		if (!this.validate({action:'add',pathstr:pathstr, value:newValue, meta:eventMeta})) return false
 		var path = pathstr.split('.')
-		var list = this.get(path)
+		var list = this.get(path, makeArrayLiteral)
 		var eventData = {
 			pathstr: pathstr,
 			newValue: newValue,
@@ -112,6 +125,7 @@ Model.prototype = {
 		if (!this.validate({action:'remove',pathstr:pathstr, index:index, meta:eventMeta})) return false
 		var path = pathstr.split('.')
 		var list = this.get(path)
+		if (!_.isArray(list)) return false
 		var oldValue = list[index]
 		var eventData = {
 			pathstr: pathstr,
