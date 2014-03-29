@@ -158,4 +158,53 @@ $(function() {
 				.show()
 		})
 	})
+
+
+	//=================================
+	window.prisonersDilemma = new Model()
+	prisonersDilemma.set('player.Rose.choice.confess.Bob.confess', 10)
+	prisonersDilemma.set('player.Rose.choice.confess.Bob.deny', 10)
+	prisonersDilemma.set('player.Rose.choice.deny.Bob.confess', 5)
+	prisonersDilemma.set('player.Rose.choice.deny.Bob.deny', 5)
+	prisonersDilemma.set('player.Rose.sex', 'female')
+	prisonersDilemma.set('player.Colin.choice.confess.Rose.confess', 10)
+	prisonersDilemma.set('player.Colin.choice.confess.Rose.deny', 10)
+	prisonersDilemma.set('player.Colin.choice.deny.Rose.confess', 5)
+	prisonersDilemma.set('player.Colin.choice.deny.Rose.deny', 5)
+	prisonersDilemma.set('player.Colin.sex', 'male')
+	window.prisonersDilemmaPresentation = new Model()
+	prisonersDilemmaPresentation.set('players', _.sortBy(_.map(prisonersDilemma.get('player'), function(player, name) {
+		return _.extend({
+			id: name,
+			name: name,
+		}, player)
+	}), function(name) { return name }))
+	$('<div class="gametheory position-relative inline-block">')
+		.append($('<div class="small column-bg pivot"></div>'))
+		.append(_.map(prisonersDilemmaPresentation.get('players'), function(player) {
+			return $()
+				.add($('<div class="row">')
+					.append($('<div class="column small pivot" data-property="name">')
+						.attr('data-record', player.id)
+						.append($('<img class="sex">').attr('src', 'src/' + player.sex + '.png'))
+						.append($('<span>').text(player.name)))
+					.append($('<div class="column" data-property="choice">')
+						.append($('<ul>').append(_.map(player.choice, function(payoffs, choice) {
+							var $choice = $('<li>').text(choice)
+							var $others = $('<ul>').appendTo($choice)
+							_.each(payoffs, function(otherChoices, other) {
+								var $other = $('<li>').text(other)
+								var $otherChoices = $('<ul>').appendTo($other)
+								_.each(otherChoices, function(payoff, otherChoice) {
+									$otherChoices.append($('<li>')
+										.append($('<span class="choice inline-block">').text(otherChoice))
+										.append($('<span class="payoff inline-block">').text(payoff)))
+								})
+								$other.appendTo($others)
+							})
+							return $choice
+						}))))
+				)
+		}))
+		.appendTo('body')
 });

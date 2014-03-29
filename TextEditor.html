@@ -1,0 +1,231 @@
+<!doctype html>
+<html>
+<head>
+	<style>
+		* {
+			font-family: 'inconsolata-dz', 'menlo', monospace;
+		}
+		.text-editor {
+		}
+		.text-editor-token {
+			box-sizing: content-box;
+			display:inline-block;
+			vertical-align:top;
+			text-align: center;
+			height: 20px;
+			font-size: 14px;
+			color: hsl(0,0%,40%);
+			border:solid 2px transparent;
+			padding: 2px 0;
+			background:transparent;
+			outline:0;
+		}
+		.text-editor-token:focus {
+			border:solid 2px orange;
+		}
+		.text-editor-token-hover,
+		.text-editor-token:not(input):not([disabled]):hover {
+			background: hsl(50,20%,90%);
+		}
+		input.text-editor-token {
+			border:0;
+			outline:0;
+			background:hsl(0,0%,30%);
+			color:white;
+			width: 200px;
+			transition: left 0.1s ease-out, top 0.1s ease-out;
+		}
+
+		.text-editor-token-word {
+			color: blue;
+		}
+		.text-editor-token-space {
+			color: transparent;
+			min-width: 8px;
+		}
+		.text-editor-token-punctuation {
+			color: orange;
+		}
+	</style>
+</head>
+<body>
+	<script src='lib/esprima.js'></script>
+	<script src='lib/underscore.js'></script>
+	<script src='lib/jquery.js'></script>
+	<script src='src/jquery.clickIt.js'></script>
+	<script src='src/Model.js'></script>
+	<script src='src/TextEditor.js'></script>
+	<script src='data/BinaryHeap.js'></script>
+	<script>
+		var ast_BinaryHeap = esprima.parse(data_BinaryHeap.toString(), {
+			range: true,
+			loc: true,
+			tokens: true,
+			comment: true,
+			attachComment: true,
+			tolerant: true
+		});
+		console.warn(ast_BinaryHeap);
+		console.warn(JSON.stringify(ast_BinaryHeap.tokens[0], null, 4));
+		var $editor = $('<div class="text-editor">')
+		var code = '[self setPenDown: true].'
+		var lines = code.split('\n')
+
+		var tokenizer = /\[|\]|\s|[a-zA-Z]+:?|\./g
+		var pairs = []
+		_.each(lines, function(line) {
+			var $line = $('<div class="text-editor-line">')
+			var token
+			var $pair
+			while (token = tokenizer.exec(line)) {
+				var $token = $('<button type="button" class="text-editor-token">').text(token[0])
+					.data('token',token)
+				if (/^[a-zA-Z_]+:/.test(token))
+					$token.addClass('text-editor-token-method')
+				else if (/^[a-zA-Z_]+/.test(token))
+					$token.addClass('text-editor-token-word')
+				else if (/^\s+$/.test(token))
+					$token.addClass('text-editor-token-space')
+				else if (token[0] === '[') {
+					$token.addClass('text-editor-token-pair')
+					pairs.push($token)
+				}
+				else if (token[0] === ']') {
+					$pair = pairs.pop()
+						.data('$end', $token)
+					$token.addClass('text-editor-token-pair')
+						.data('$start', $pair)
+				}
+				else
+					$token.addClass('text-editor-token-punctuation')
+				$line.append($token)
+			}
+			$editor.append($line)
+		})
+
+		var $input = $('<input class="text-editor-token"/>')
+					.css({
+						position:'absolute'
+					})
+
+		;(function() {
+			var END_OF = {
+				'{': '}',
+				'[': ']'
+			}
+			var START_OF = {}
+			_.each(END_OF, function(end,start) {
+				START_OF[end] = start
+			})
+
+			var anyTokenPairListenMouseEnter = function() {
+				$('body').one('mouseenter.anyTokenPairListenMouseEnter', '.text-editor-token-pair', function(enter) {
+					console.warn('anyMouseEnter')
+					var $token = $(this)
+					var $start = $token.data('$start') || $token
+					var $end = $token.data('$start') ? $token : $token.data('$end')
+					var $pairs = $().add($start).add($end)
+						.addClass('text-editor-token-hover')
+					var tokenListenMouseLeave = function() {
+						$token.one('mouseleave.tokenListenMouseLeave', function(leave) {
+							$pairs.removeClass('text-editor-token-hover')
+							anyTokenPairListenMouseEnter()
+						})
+					}
+					tokenListenMouseLeave()
+				})
+			};
+
+			anyTokenPairListenMouseEnter()
+		})();
+
+		;(function() {
+			var anyTokenMethodListenClick = function() {
+				var changeTimer, removeTimer, reenableTimer
+				var $token = $()
+				var updateValue = function() {
+					var val = $.trim($input.val())
+				}
+				var updateAndReset = function(timeout) {
+					clearTimeout(changeTimer)
+					clearTimeout(reenableTimer)
+					updateValue()
+					$token.removeClass('text-editor-token-select')
+					clearTimeout(removeTimer);
+
+					var finish = function() {
+						console.warn('Bye!')
+						$input.remove();
+					};
+
+					if (!_.isNumber(timeout)) timeout = 0;
+
+					if (timeout <= 0) {
+						finish();
+					} else {
+						removeTimer = setTimeout(finish, timeout);
+					}
+
+					$token.prop('disabled', false);
+				}
+
+				$('body').off('.anyTokenMethodListenClick')
+				$('body').on('click.anyTokenMethodListenClick', '.text-editor-token-method', function(enter) {
+					console.warn('anyClick')
+					$token = $(this)
+						.addClass('text-editor-token-select')
+						.prop('disabled', true);
+					clearTimeout(removeTimer);
+
+					console.warn($token.data('token'))
+					var offset = $token.offset()
+					offset.top += $token.outerHeight() + 10
+					var token = $token.data('token')
+					var oldValue = token[0]
+					if (!$.contains(document.body, $input[0])) {
+						$input.appendTo('body')
+					}
+					$input
+						.val(oldValue)
+						.offset(offset)
+						.on('keydown change', function(keydown_change) {
+							console.warn('keydown_change', keydown_change);
+							if (keydown_change.type === 'keydown') {
+								if (keydown_change.keyCode === 27 /* ESC */) {
+									updateAndReset(0);
+									console.warn('ESC')
+									$token.focus();
+									return;
+								}
+								if (keydown_change.keyCode === 13 /* ENTER */) {
+									updateAndReset(0);
+									keydown_change.preventDefault();
+									console.warn('ENTER')
+									$token.focus();
+									return;
+								}
+								if (keydown_change.keyCode === 9 /* TAB */) {
+									updateAndReset(0);
+									$token.focus();
+									console.warn('TAB')
+									return;
+								}
+							}
+							clearTimeout(changeTimer)
+							changeTimer = setTimeout(updateValue, 100)
+						})
+						.select()
+						.on('blur', function(blur) {
+							updateAndReset()
+							console.warn('BLUR', blur)
+						})
+				})
+			}
+			anyTokenMethodListenClick()
+		})();
+
+		$editor.appendTo('body')
+	</script>
+</body>
+</html>
+
