@@ -7,6 +7,23 @@
 		}
 		.text-editor {
 		}
+        .text-editor-line.even {
+            background: hsl(0,0%,95%);
+        }
+        .text-editor-line {
+            white-space: nowrap;
+            padding: 4px 0;
+        }
+        .text-editor-line-indents {
+            display:inline-block;
+            vertical-align:top;
+            white-space: nowrap;
+        }
+        .text-editor-line-tokens {
+            display:inline-block;
+            vertical-align:top;
+            white-space: normal;
+        }
 		.text-editor-token {
 			box-sizing: content-box;
 			display:inline-block;
@@ -14,19 +31,25 @@
 			text-align: center;
 			height: 20px;
 			font-size: 14px;
-			color: hsl(0,0%,40%);
-			border:solid 2px transparent;
-			padding: 2px 0;
+			border:solid 1px transparent;
+            margin: 0;
+			padding: 2px;
 			background:transparent;
 			outline:0;
+			color: hsl(0,0%,50%);
 		}
 		.text-editor-token:focus {
-			border:solid 2px orange;
+			border:solid 1px orange;
 		}
 		.text-editor-token-hover,
 		.text-editor-token:not(input):not([disabled]):hover {
 			background: hsl(50,20%,90%);
 		}
+        .text-editor-indent {
+            display:inline-block;
+            vertical-align:top;
+            width:20px;
+        }
 		input.text-editor-token {
 			border:0;
 			outline:0;
@@ -36,8 +59,9 @@
 			transition: left 0.1s ease-out, top 0.1s ease-out;
 		}
 
-		.text-editor-token-word {
-			color: blue;
+		.text-editor-token-dot {
+            padding-left:0;
+            padding-right:0;
 		}
 		.text-editor-token-space {
 			color: transparent;
@@ -57,7 +81,9 @@
 	<script src='src/TextEditor.js'></script>
 	<script src='data/BinaryHeap.js'></script>
 	<script>
-		var ast_BinaryHeap = esprima.parse(data_BinaryHeap.toString(), {
+        var code = data_BinaryHeap.toString();
+		var lines = code.split('\n')
+		var ast_BinaryHeap = esprima.parse(code, {
 			range: true,
 			loc: true,
 			tokens: true,
@@ -68,24 +94,68 @@
 		console.warn(ast_BinaryHeap);
 		console.warn(JSON.stringify(ast_BinaryHeap.tokens[0], null, 4));
 		var $editor = $('<div class="text-editor">')
-		var code = '[self setPenDown: true].'
-		var lines = code.split('\n')
 
-		var tokenizer = /\[|\]|\s|[a-zA-Z]+:?|\./g
+		//var tokenizer = /\[|\]|\s|[a-zA-Z]+:?|\./g
 		var pairs = []
-		_.each(lines, function(line) {
-			var $line = $('<div class="text-editor-line">')
-			var token
-			var $pair
-			while (token = tokenizer.exec(line)) {
-				var $token = $('<button type="button" class="text-editor-token">').text(token[0])
-					.data('token',token)
-				if (/^[a-zA-Z_]+:/.test(token))
-					$token.addClass('text-editor-token-method')
-				else if (/^[a-zA-Z_]+/.test(token))
-					$token.addClass('text-editor-token-word')
-				else if (/^\s+$/.test(token))
-					$token.addClass('text-editor-token-space')
+        var tokenCursor = 0;
+        // Esprima has duplicate tokens, it's weird.
+        var visitedRanges = {};
+        var tokens = _.filter(ast_BinaryHeap.tokens, function(token) {
+            var key = token.range.join(',');
+            if (visitedRanges[key]) return false;
+            visitedRanges[key] = true;
+            return true;
+        });
+        var buffer = [];
+        console.warn('types', _.unique(_.pluck(tokens, 'type')));
+        var tokenTemplate = _.template('<button data-token-value="<%- data.tokenValue %>" data-token-type="<%- data.tokenType %>" data-token-index="<%- data.tokenIndex %>" type="button" class="<%- data.extraClass %> text-editor-token"><%- data.label %></button>', null, {variable:'data'});
+        var visibleLines = 0;
+        var indentCount = 0;
+        var indentTemplate = _.template('<span class="text-editor-indent"></span>', null, {variable:'data'});
+        var INDENTERS = /^[{\[(]$/;
+        var UNINDENTERS = /^[}\])]$/;
+		_.each(lines, function(line, lineIndex) {
+            var currentLine = lineIndex + 1;
+
+            var lineBuffer = [];
+
+            var makeIndentString = function() {
+                return _.map(_.range(indentCount), indentTemplate).join('');
+            }
+            var indentStr = makeIndentString();
+
+            var nextTokenCursor = tokenCursor;
+            _.every(tokens.slice(tokenCursor), function(token, tokenIndex) {
+                if (token.loc.start.line !== token.loc.end.line) {
+                    console.warn('NOT IN THE SAME LINE??');
+                    return false;
+                }
+                if (token.loc.start.line !== currentLine) {
+                    return false;
+                }
+
+                var extraClass = '';
+                if (token.type === 'Punctuator' && INDENTERS.test(token.value)) {
+                    indentCount++;
+                }
+                if (token.type === 'Punctuator' && UNINDENTERS.test(token.value)) {
+                    indentCount--;
+
+                    // Unindent if the line starts with an unindenter.
+                    if (lineBuffer.length <= 0) {
+                        indentStr = makeIndentString();
+                    }
+                }
+
+                lineBuffer.push(tokenTemplate({
+                    tokenType: token.type,
+                    extraClass: extraClass,
+                    tokenIndex: tokenIndex,
+                    tokenValue: token.value,
+                    label: token.value
+                }));
+
+                /*
 				else if (token[0] === '[') {
 					$token.addClass('text-editor-token-pair')
 					pairs.push($token)
@@ -98,10 +168,31 @@
 				}
 				else
 					$token.addClass('text-editor-token-punctuation')
-				$line.append($token)
-			}
-			$editor.append($line)
-		})
+                */
+
+                nextTokenCursor = tokenCursor + tokenIndex + 1;
+                return true;
+            });
+            tokenCursor = nextTokenCursor;
+
+            if (lineBuffer.length <= 0) return;
+
+            visibleLines++;
+
+            if (visibleLines % 2 === 0) {
+                buffer.push('<div class="text-editor-line even">');
+            } else {
+                buffer.push('<div class="text-editor-line odd">');
+            }
+
+            buffer.push('<span class="text-editor-line-indents">' + indentStr + '</span>');
+
+            buffer.push('<span class="text-editor-line-tokens">' + lineBuffer.join('') + '</span>');
+
+            buffer.push('</div>');
+		});
+
+        $editor.html(buffer.join(''));
 
 		var $input = $('<input class="text-editor-token"/>')
 					.css({
