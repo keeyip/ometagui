@@ -222,9 +222,39 @@
 		.text-editor-token-punctuation {
 			color: orange;
 		}
+#app-menu {
+        position: fixed;
+        top:0;
+        right:80px;
+        width: 20px;
+        height: 20px;
+}
+#app-menu [name="load-file"]:after {
+    content: '';
+    display:block;
+    width: 20px;
+    height: 20px;
+    background:black;
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+}
+#app-menu [name="load-file"] {
+    display:block;
+    position:relative;
+    width: 20px;
+    height: 20px;
+    overflow:hidden;
+}
 	</style>
 </head>
 <body>
+    <div id="app-menu">
+        <input name="load-file" type="file"/>
+    </div>
+    <div id="code-preview">Loading...</div>
 	<script src='lib/esprima.js'></script>
 	<script src='lib/estraverse.js'></script>
 	<script src='lib/underscore.js'></script>
@@ -234,212 +264,235 @@
 	<script src='src/TextEditor.js'></script>
 	<script src='data/BinaryHeap.js'></script>
 	<script>
-        var code = data_BinaryHeap.toString();
-		var lines = code.split('\n')
-		var ast_BinaryHeap = esprima.parse(code, {
-			range: true,
-			loc: true,
-			tokens: true,
-			comment: true,
-			attachComment: true,
-			tolerant: true
-		});
-		console.warn(ast_BinaryHeap);
-		console.warn(JSON.stringify(ast_BinaryHeap.tokens[0], null, 4));
-        function attachTokens(ast) {
-            // Esprima has duplicate tokens, it's weird.
-            var visitedRanges = {};
-            var tokens = _.filter(ast_BinaryHeap.tokens, function(token) {
-                var key = token.range.join(',');
-                if (visitedRanges[key]) return false;
-                visitedRanges[key] = true;
-                return true;
+        function render(code) {
+            var lines = code.split('\n')
+            var ast_BinaryHeap = esprima.parse(code, {
+                range: true,
+                loc: true,
+                tokens: true,
+                comment: true,
+                attachComment: true,
+                tolerant: true
             });
-            var currentTokenIndex = 0;
-            var buffer = [];
-            var tokenTemplate = _.template('<button data-token-range-start="<%- data.tokenRange[0] %>" data-token-value="<%- data.tokenValue %>" data-token-type="<%- data.tokenType %>" data-token-index="<%- data.tokenIndex %>" type="button" class="<%- data.extraClass %> text-editor-token"><%- data.label %></button>', null, {variable:'data'});
-            var nodeBeginTemplate = _.template('<span data-node-range-start="<%- data.nodeRange[0] %>" class="text-editor-node" data-node-type="<%- data.nodeType %>">', null, {variable:'data'});
-            var nodeEndTemplate = _.template('</span>', null, {variable:'data'});
-            var collectTokens = function(farthestAllowed, node) {
-                var nextTokenIndex = currentTokenIndex;
-                _.every(tokens.slice(currentTokenIndex), function(token, tokenIndex) {
-                    if (token.range[1] > farthestAllowed) return false;
-
-
-                    var extraClass = '';
-                    buffer.push(tokenTemplate({
-                        tokenType: token.type,
-                        extraClass: extraClass,
-                        tokenIndex: tokenIndex,
-                        tokenValue: token.value,
-                        label: token.value,
-                        tokenRange: token.range
-                    }));
-
-
-                    nextTokenIndex = currentTokenIndex + tokenIndex + 1;
+            function attachTokens(ast) {
+                // Esprima has duplicate tokens, it's weird.
+                var visitedRanges = {};
+                var tokens = _.filter(ast_BinaryHeap.tokens, function(token) {
+                    var key = token.range.join(',');
+                    if (visitedRanges[key]) return false;
+                    visitedRanges[key] = true;
                     return true;
                 });
-                currentTokenIndex = nextTokenIndex;
-            };
-            function traverse(currentNode) {
-                estraverse.traverse(currentNode, {
-                    enter: function(node) {
-                        buffer.push(nodeBeginTemplate({
-                            nodeRange: node.range,
-                            nodeType: node.type
-                        }));
-                        var children = _.pick(node, estraverse.VisitorKeys[node.type]);
-                        _.each(children, function(object) {
-                            if (_.isArray(object)) {
-                                _.each(object, function(child) {
-                                    collectTokens(child.range[0], node);
-                                    traverse(child);
-                                });
-                            } else if (object) {
-                                collectTokens(object.range[0], node);
-                                traverse(object);
-                            }
-                        });
+                var currentTokenIndex = 0;
+                var buffer = [];
+                var tokenTemplate = _.template('<button data-token-range-start="<%- data.tokenRange[0] %>" data-token-value="<%- data.tokenValue %>" data-token-type="<%- data.tokenType %>" data-token-index="<%- data.tokenIndex %>" type="button" class="<%- data.extraClass %> text-editor-token"><%- data.label %></button>', null, {variable:'data'});
+                var nodeBeginTemplate = _.template('<span data-node-range-start="<%- data.nodeRange[0] %>" class="text-editor-node" data-node-type="<%- data.nodeType %>">', null, {variable:'data'});
+                var nodeEndTemplate = _.template('</span>', null, {variable:'data'});
+                var collectTokens = function(farthestAllowed, node) {
+                    var nextTokenIndex = currentTokenIndex;
+                    _.every(tokens.slice(currentTokenIndex), function(token, tokenIndex) {
+                        if (token.range[1] > farthestAllowed) return false;
 
-                        return estraverse.VisitorOption.Skip;
-                    },
-                    leave: function(node) {
-                        collectTokens(node.range[1], node);
-                        buffer.push(nodeEndTemplate({
-                            nodeType: node.type
+
+                        var extraClass = '';
+                        buffer.push(tokenTemplate({
+                            tokenType: token.type,
+                            extraClass: extraClass,
+                            tokenIndex: tokenIndex,
+                            tokenValue: token.value,
+                            label: token.value,
+                            tokenRange: token.range
                         }));
-                    }
-                });
+
+
+                        nextTokenIndex = currentTokenIndex + tokenIndex + 1;
+                        return true;
+                    });
+                    currentTokenIndex = nextTokenIndex;
+                };
+                function traverse(currentNode) {
+                    estraverse.traverse(currentNode, {
+                        enter: function(node) {
+                            buffer.push(nodeBeginTemplate({
+                                nodeRange: node.range,
+                                nodeType: node.type
+                            }));
+                            var children = _.pick(node, estraverse.VisitorKeys[node.type]);
+                            _.each(children, function(object) {
+                                if (_.isArray(object)) {
+                                    _.each(object, function(child) {
+                                        collectTokens(child.range[0], node);
+                                        traverse(child);
+                                    });
+                                } else if (object) {
+                                    collectTokens(object.range[0], node);
+                                    traverse(object);
+                                }
+                            });
+
+                            return estraverse.VisitorOption.Skip;
+                        },
+                        leave: function(node) {
+                            collectTokens(node.range[1], node);
+                            buffer.push(nodeEndTemplate({
+                                nodeType: node.type
+                            }));
+                        }
+                    });
+                }
+                traverse(ast);
+                return buffer.join('');
             }
-            traverse(ast);
-            return buffer.join('');
-		}
-		var $editor = $('<div class="text-editor">');
-        $editor.html(attachTokens(ast_BinaryHeap));
+            var $editor = $('<div class="text-editor">');
+            $editor.html(attachTokens(ast_BinaryHeap));
 
-		var $input = $('<input class="text-editor-token"/>')
-					.css({
-						position:'absolute'
-					})
+            var $input = $('<input class="text-editor-token"/>')
+                        .css({
+                            position:'absolute'
+                        })
 
-		;(function() {
-			var END_OF = {
-				'{': '}',
-				'[': ']'
-			}
-			var START_OF = {}
-			_.each(END_OF, function(end,start) {
-				START_OF[end] = start
-			})
+            ;(function() {
+                var END_OF = {
+                    '{': '}',
+                    '[': ']'
+                }
+                var START_OF = {}
+                _.each(END_OF, function(end,start) {
+                    START_OF[end] = start
+                })
 
-			var anyTokenPairListenMouseEnter = function() {
-				$('body').one('mouseenter.anyTokenPairListenMouseEnter', '.text-editor-token-pair', function(enter) {
-					console.warn('anyMouseEnter')
-					var $token = $(this)
-					var $start = $token.data('$start') || $token
-					var $end = $token.data('$start') ? $token : $token.data('$end')
-					var $pairs = $().add($start).add($end)
-						.addClass('text-editor-token-hover')
-					var tokenListenMouseLeave = function() {
-						$token.one('mouseleave.tokenListenMouseLeave', function(leave) {
-							$pairs.removeClass('text-editor-token-hover')
-							anyTokenPairListenMouseEnter()
-						})
-					}
-					tokenListenMouseLeave()
-				})
-			};
+                var anyTokenPairListenMouseEnter = function() {
+                    $('body').one('mouseenter.anyTokenPairListenMouseEnter', '.text-editor-token-pair', function(enter) {
+                        console.warn('anyMouseEnter')
+                        var $token = $(this)
+                        var $start = $token.data('$start') || $token
+                        var $end = $token.data('$start') ? $token : $token.data('$end')
+                        var $pairs = $().add($start).add($end)
+                            .addClass('text-editor-token-hover')
+                        var tokenListenMouseLeave = function() {
+                            $token.one('mouseleave.tokenListenMouseLeave', function(leave) {
+                                $pairs.removeClass('text-editor-token-hover')
+                                anyTokenPairListenMouseEnter()
+                            })
+                        }
+                        tokenListenMouseLeave()
+                    })
+                };
 
-			anyTokenPairListenMouseEnter()
-		})();
+                anyTokenPairListenMouseEnter()
+            })();
 
-		;(function() {
-			var anyTokenMethodListenClick = function() {
-				var changeTimer, removeTimer, reenableTimer
-				var $token = $()
-				var updateValue = function() {
-					var val = $.trim($input.val())
-				}
-				var updateAndReset = function(timeout) {
-					clearTimeout(changeTimer)
-					clearTimeout(reenableTimer)
-					updateValue()
-					$token.removeClass('text-editor-token-select')
-					clearTimeout(removeTimer);
+            ;(function() {
+                var anyTokenMethodListenClick = function() {
+                    var changeTimer, removeTimer, reenableTimer
+                    var $token = $()
+                    var updateValue = function() {
+                        var val = $.trim($input.val())
+                    }
+                    var updateAndReset = function(timeout) {
+                        clearTimeout(changeTimer)
+                        clearTimeout(reenableTimer)
+                        updateValue()
+                        $token.removeClass('text-editor-token-select')
+                        clearTimeout(removeTimer);
 
-					var finish = function() {
-						console.warn('Bye!')
-						$input.remove();
-					};
+                        var finish = function() {
+                            console.warn('Bye!')
+                            $input.remove();
+                        };
 
-					if (!_.isNumber(timeout)) timeout = 0;
+                        if (!_.isNumber(timeout)) timeout = 0;
 
-					if (timeout <= 0) {
-						finish();
-					} else {
-						removeTimer = setTimeout(finish, timeout);
-					}
+                        if (timeout <= 0) {
+                            finish();
+                        } else {
+                            removeTimer = setTimeout(finish, timeout);
+                        }
 
-					$token.prop('disabled', false);
-				}
+                        $token.prop('disabled', false);
+                    }
 
-				$('body').off('.anyTokenMethodListenClick')
-				$('body').on('click.anyTokenMethodListenClick', '.text-editor-token-method', function(enter) {
-					console.warn('anyClick')
-					$token = $(this)
-						.addClass('text-editor-token-select')
-						.prop('disabled', true);
-					clearTimeout(removeTimer);
+                    $('body').off('.anyTokenMethodListenClick')
+                    $('body').on('click.anyTokenMethodListenClick', '.text-editor-token-method', function(enter) {
+                        console.warn('anyClick')
+                        $token = $(this)
+                            .addClass('text-editor-token-select')
+                            .prop('disabled', true);
+                        clearTimeout(removeTimer);
 
-					console.warn($token.data('token'))
-					var offset = $token.offset()
-					offset.top += $token.outerHeight() + 10
-					var token = $token.data('token')
-					var oldValue = token[0]
-					if (!$.contains(document.body, $input[0])) {
-						$input.appendTo('body')
-					}
-					$input
-						.val(oldValue)
-						.offset(offset)
-						.on('keydown change', function(keydown_change) {
-							console.warn('keydown_change', keydown_change);
-							if (keydown_change.type === 'keydown') {
-								if (keydown_change.keyCode === 27 /* ESC */) {
-									updateAndReset(0);
-									console.warn('ESC')
-									$token.focus();
-									return;
-								}
-								if (keydown_change.keyCode === 13 /* ENTER */) {
-									updateAndReset(0);
-									keydown_change.preventDefault();
-									console.warn('ENTER')
-									$token.focus();
-									return;
-								}
-								if (keydown_change.keyCode === 9 /* TAB */) {
-									updateAndReset(0);
-									$token.focus();
-									console.warn('TAB')
-									return;
-								}
-							}
-							clearTimeout(changeTimer)
-							changeTimer = setTimeout(updateValue, 100)
-						})
-						.select()
-						.on('blur', function(blur) {
-							updateAndReset()
-							console.warn('BLUR', blur)
-						})
-				})
-			}
-			anyTokenMethodListenClick()
-		})();
+                        console.warn($token.data('token'))
+                        var offset = $token.offset()
+                        offset.top += $token.outerHeight() + 10
+                        var token = $token.data('token')
+                        var oldValue = token[0]
+                        if (!$.contains(document.body, $input[0])) {
+                            $input.appendTo('body')
+                        }
+                        $input
+                            .val(oldValue)
+                            .offset(offset)
+                            .on('keydown change', function(keydown_change) {
+                                console.warn('keydown_change', keydown_change);
+                                if (keydown_change.type === 'keydown') {
+                                    if (keydown_change.keyCode === 27 /* ESC */) {
+                                        updateAndReset(0);
+                                        console.warn('ESC')
+                                        $token.focus();
+                                        return;
+                                    }
+                                    if (keydown_change.keyCode === 13 /* ENTER */) {
+                                        updateAndReset(0);
+                                        keydown_change.preventDefault();
+                                        console.warn('ENTER')
+                                        $token.focus();
+                                        return;
+                                    }
+                                    if (keydown_change.keyCode === 9 /* TAB */) {
+                                        updateAndReset(0);
+                                        $token.focus();
+                                        console.warn('TAB')
+                                        return;
+                                    }
+                                }
+                                clearTimeout(changeTimer)
+                                changeTimer = setTimeout(updateValue, 100)
+                            })
+                            .select()
+                            .on('blur', function(blur) {
+                                updateAndReset()
+                                console.warn('BLUR', blur)
+                            })
+                    })
+                }
+                anyTokenMethodListenClick()
+            })();
 
-		$editor.appendTo('body')
+            $('#code-preview').html($editor);
+        }
+
+        render(data_BinaryHeap.toString());
+
+        $('#app-menu [name="load-file"]').on('change', function(event) {
+            var files = event.target.files,
+                f = files[0];
+            if (!f) return;
+            $('#code-preview').html('Loading...');
+            _.defer(function() {
+                try {
+                    var reader = new FileReader();
+                    reader.onload = function(finish) {
+                        try {
+                            render(reader.result);
+                        } catch (err1) {
+                            $('#code-preview').html('Error: ' + err1);
+                        }
+                    };
+                    reader.readAsText(f, 'utf-8');
+                } catch(err) {
+                    $('#code-preview').html('Error: ' + err);
+                }
+            }, 100);
+        });
 	</script>
 </body>
 </html>
