@@ -64,6 +64,16 @@
             display:inline-block;
             vertical-align:top;
         }
+        .text-editor-node[data-node-type="FunctionDeclaration"] {
+            display: block;
+        }
+        .text-editor-node[data-node-type="ArrayExpression"] > .text-editor-node {
+            display: block;
+            margin-left:20px;
+        }
+        .text-editor-node[data-node-type="ArrayExpression"] > .text-editor-token[data-token-value=","] {
+            display: none;
+        }
         .text-editor-node[data-node-type="Property"] {
             display: block;
             margin-left: 20px;
