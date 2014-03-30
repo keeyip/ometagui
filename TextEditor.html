@@ -5,25 +5,6 @@
 		* {
 			font-family: 'inconsolata-dz', 'menlo', monospace;
 		}
-		.text-editor {
-		}
-        .text-editor-line.even {
-            background: hsl(0,0%,95%);
-        }
-        .text-editor-line {
-            white-space: nowrap;
-            padding: 4px 0;
-        }
-        .text-editor-line-indents {
-            display:inline-block;
-            vertical-align:top;
-            white-space: nowrap;
-        }
-        .text-editor-line-tokens {
-            display:inline-block;
-            vertical-align:top;
-            white-space: normal;
-        }
 		.text-editor-token {
 			box-sizing: content-box;
 			display:inline-block;
@@ -74,9 +55,43 @@
         .text-editor-node[data-node-type="ArrayExpression"] > .text-editor-token[data-token-value=","] {
             display: none;
         }
+        .text-editor-node[data-node-type="ObjectExpression"] {
+            border: solid 1px hsl(0,0%,50%);
+            border-radius:4px;
+            padding:4px;
+            background:white;
+            min-width:20px;
+            min-height:20px;
+        }
+        .text-editor-node[data-node-type*="Property"] > .text-editor-node[data-node-type="Literal"] > .text-editor-token[data-token-type="String"],
+        .text-editor-node[data-node-type*="Property"] > .text-editor-node[data-node-type="Identifier"] > .text-editor-token[data-token-type="Identifier"],
+        .text-editor-node[data-node-type*="Function"] > .text-editor-node[data-node-type="Identifier"] > .text-editor-token[data-token-type="Identifier"]
+        {
+            color: black;
+            font-style: italic;
+            font-weight: bold;
+            background:transparent;
+        }
+        .text-editor-node[data-node-type="ObjectExpression"] > .text-editor-token[data-token-value="{"],
+        .text-editor-node[data-node-type="ObjectExpression"] > .text-editor-token[data-token-value="}"]
+        {
+            display:none;
+        }
+        .text-editor-token[data-token-type="RegularExpression"] {
+            background: hsl(100,50%,85%);
+        }
+        .text-editor-token[data-token-type="String"] {
+            background: hsl(200,50%,85%);
+        }
         .text-editor-node[data-node-type="Property"] {
             display: block;
-            margin-left: 20px;
+            margin-bottom: 8px;
+        }
+        .text-editor-node[data-node-type="AssignmentExpression"] > .text-editor-token[data-token-type="Punctuator"],
+        .text-editor-node[data-node-type="VariableDeclarator"] > .text-editor-token[data-token-type="Punctuator"] {
+            color: black;
+            font-weight: bold;
+            margin: 0 8px;
         }
 
         .text-editor-node[data-node-type*="Expression"]:not([data-node-type="AssignmentExpression"]) > .text-editor-node[data-node-type*="Function"] {
@@ -197,6 +212,14 @@
             text-overflow: ellipsis;
             border-right: dashed 1px hsl(0,0%,50%);
         }
+        .text-editor-node[data-node-type*="Function"] > .text-editor-node[data-node-type="BlockStatement"] {
+            padding-left:0;
+            margin-top: 20px;
+            margin-bottom: 8px;
+        }
+        .text-editor-node[data-node-type="BlockStatement"] > .text-editor-node[data-node-type*="Function"] {
+            margin-left:20px;
+        }
         .text-editor-node[data-node-type*="Statement"] {
             display: block;
             white-space:nowrap;
@@ -210,6 +233,12 @@
         {
             display: inline-block;
         }
+
+        .text-editor-node[data-node-type="IfStatement"] > .text-editor-token[data-token-value="else"] + .text-editor-node:not([data-node-type="BlockStatement"]) {
+            display: block;
+        }
+
+
         .text-editor-node[data-node-type="BlockStatement"] > .text-editor-token[data-token-value="{"],
         .text-editor-node[data-node-type="BlockStatement"] > .text-editor-token[data-token-value="}"]
         {
